@@ -1,0 +1,44 @@
+
+.stMainBlockContainer {
+    padding-top: 2rem !important;
+}
+
+.st-key-btn_to_hist_tend button {
+    background: linear-gradient(135deg, #d7b787, #99815c);
+    color: white;
+    border-radius: 999px;
+    transition: transform 0.1s ease-in-out;
+}
+.st-key-btn_to_hist_tend button:hover {
+    transform: translateY(-5px);
+}
+
+.st-key-btn_to_dafo_anl button {
+    background: linear-gradient(135deg, #d9a2cd, #28142d);
+    color: white;
+    border-radius: 999px;
+    transition: transform 0.1s ease-in-out;
+}
+.st-key-btn_to_dafo_anl button:hover {
+    transform: translateY(-5px);
+}
+
+.st-key-btn_to_country_cmp button {
+    background: linear-gradient(135deg, #9bcbaa, #1a7b4a);
+    color: white;
+    border-radius: 999px;
+    transition: transform 0.1s ease-in-out;
+}
+.st-key-btn_to_country_cmp button:hover {
+    transform: translateY(-5px);
+}
+
+.st-key-btn_to_country_hist_tend button {
+    background: linear-gradient(135deg, #d1abab, #751b1b);
+    color: white;
+    border-radius: 999px;
+    transition: transform 0.1s ease-in-out;
+}
+.st-key-btn_to_country_hist_tend button:hover {
+    transform: translateY(-5px);
+}
