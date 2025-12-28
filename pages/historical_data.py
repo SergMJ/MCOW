@@ -70,9 +70,11 @@ with col2:
     
     st.space("small")
     
+    filtered_dict = {k:v for k, v in st.session_state.temporal_entity_data.items() if len(v) > 1}
+    
     attr_option = st.selectbox(
     "Looking for tendencies?",
-    list(st.session_state.temporal_entity_data.keys()),
+    list(filtered_dict.keys()),
     index=None,
     placeholder="Choose one attribute",
     key=f"attr_selector_{st.session_state.country_wd_code}"
@@ -80,7 +82,7 @@ with col2:
     
     if attr_option:
         
-        values_to_print = st.session_state.temporal_entity_data[attr_option]
+        values_to_print = filtered_dict[attr_option]
         years_list = list()
         values_list = list()
         
@@ -124,13 +126,13 @@ with col1:
 with col2:
     with st.container(horizontal=True):
         st.space(30)
-        button2_clicked = st.button(label="Look for another country based on attributes tendencies", key="btn_to_country_hist_tend", width=250)
+        button2_clicked = st.button(label="Perform full DAFO analysis", key="btn_to_dafo_anl", width=250)
         if button2_clicked:
-            st.switch_page("pages/tendency_countries.py")
+            st.switch_page("pages/dafo_analysis.py")
         
 with col3:
     with st.container(horizontal=True):
         st.space(30)
-        button3_clicked = st.button(label="Perform full DAFO analysis", key="btn_to_dafo_anl", width=250)
+        button3_clicked = st.button(label="Look for another country based on attributes tendencies", key="btn_to_country_hist_tend", width=250)
         if button3_clicked:
-            st.switch_page("pages/dafo_analysis.py")
+            st.switch_page("pages/tendency_countries.py")

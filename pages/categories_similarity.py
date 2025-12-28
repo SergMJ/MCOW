@@ -200,13 +200,13 @@ with col1:
 with col2:
     with st.container(horizontal=True):
         st.space(30)
-        button2_clicked = st.button(label="Look for another country based on attributes tendencies", key="btn_to_country_hist_tend", width=250)
+        button2_clicked = st.button(label="Perform full DAFO analysis", key="btn_to_dafo_anl", width=250)
         if button2_clicked:
-            st.switch_page("pages/tendency_countries.py")
+            st.switch_page("pages/dafo_analysis.py")
         
 with col3:
     with st.container(horizontal=True):
         st.space(30)
-        button3_clicked = st.button(label="Perform full DAFO analysis", key="btn_to_dafo_anl", width=250)
+        button3_clicked = st.button(label="Look for another country based on attributes tendencies", key="btn_to_country_hist_tend", width=250)
         if button3_clicked:
-            st.switch_page("pages/dafo_analysis.py")
+            st.switch_page("pages/tendency_countries.py")

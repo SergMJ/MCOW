@@ -18,6 +18,12 @@ def on_country_change():
             alpha_codes_dict[c.lower().replace(" ", "-")][0].lower()
         )
         
+def enrich_elem(elem):
+    if "access" in elem:
+        return elem.replace("access", "sanitation access")
+    elif "debt" in elem:
+        return elem.replace("debt", "public debt rate")
+    return elem
 # Header
 with st.container(horizontal=True, vertical_alignment="center"):
     st.image("./static/images/MCOW.png", "", 100)
@@ -73,7 +79,7 @@ with col2:
         dafo_weaknesses = [v.replace("_", " ").capitalize() for v in st.session_state.dafo_analysis["weaknesses"].values()]
         
         with st.container(horizontal=False):
-            st.header("Country's features analysis", text_alignment="center")
+            st.header("Country's features analysis", text_alignment="center", anchor=False)
             st.space("small")
         
         
@@ -84,6 +90,7 @@ with col2:
                 st.markdown("<p style='color: #227229; font-size: 24px; font-family: sans-serif; font-weight:bold; max-width: 36vw; text-decoration: underline;'> Main strengths <br>", unsafe_allow_html=True)
                 
                 for elem in dafo_strengths:
+                    elem = enrich_elem(elem)
                     st.markdown(f"<p style='color: #053609; font-size: 18px; font-family: sans-serif; max-width: 36vw;'> ✔️ {elem}", unsafe_allow_html=True)
         
         with col2_2:
@@ -91,6 +98,7 @@ with col2:
                 st.markdown("<p style='color: #a10101; font-size: 24px; font-family: sans-serif; font-weight:bold; max-width: 36vw; text-decoration: underline;'> Main weaknesses <br>", unsafe_allow_html=True)
                 
                 for elem in dafo_weaknesses:
+                    elem = enrich_elem(elem)
                     st.markdown(f"<p style='color: #58130f; font-size: 18px; font-family: sans-serif; max-width: 36vw;'> ❌ {elem}", unsafe_allow_html=True)
 
 
@@ -99,20 +107,20 @@ col1, col2, col3 = st.columns(3)
 with col1:
     with st.container(horizontal=True):
         st.space(30)
-        button1_clicked = st.button(label="Compare pairs of countries", key="btn_to_country_cmp", width=250)
+        button1_clicked = st.button(label="Analyse historical tendencies", key="btn_to_hist_tend")
         if button1_clicked:
-            st.switch_page("pages/categories_similarity.py")
+            st.switch_page("pages/historical_data.py")
         
 with col2:
     with st.container(horizontal=True):
         st.space(30)
-        button2_clicked = st.button(label="Look for another country based on attributes tendencies", key="btn_to_country_hist_tend", width=250)
+        button2_clicked = st.button(label="Compare pairs of countries", key="btn_to_country_cmp", width=250)
         if button2_clicked:
-            st.switch_page("pages/tendency_countries.py")
+            st.switch_page("pages/categories_similarity.py")
         
 with col3:
     with st.container(horizontal=True):
         st.space(30)
-        button3_clicked = st.button(label="Perform full DAFO analysis", key="btn_to_dafo_anl", width=250)
+        button3_clicked = st.button(label="Look for another country based on attributes tendencies", key="btn_to_country_hist_tend", width=250)
         if button3_clicked:
-            st.switch_page("pages/dafo_analysis.py")
+            st.switch_page("pages/tendency_countries.py")

@@ -221,14 +221,14 @@ class MCOWAnalyser:
     
     def __init__(self, graph):
         """
-        Inicializa el analizador con un grafo de MCOW, precargando además
-        el diccionario de países disponibles para las futuras consultas.
+        Initializes the analyser by using a MCOW graph, by also pre-loading 
+        the avalilable countries dictionary for future queries purposes.
         
-        Se utiliza un diccionario como caché, para almacenar los resultados
-        de las consultas y así evitar volver a procesar una consulta ya ejecutada.
+        Furthermore, a dictionary serves as a cache, to store the queries results
+        and avoid processing again an already executed query.
         
         Args:
-            graph: objeto graph de rdflib con la ontología de MCOW.
+            graph: rdflib graph object with a MCOW's ontology on it.
             
         """
         self.graph = graph
@@ -370,9 +370,9 @@ class MCOWAnalyser:
         
         **Returns"":
         
-        -> Two values: "total", that shows the amount of subEntities that contains the
-        desired ratio and "totalFiltered", which shows how many of the total fulfills the
-        series requirement.
+        -> Three values: "total", that shows the amount of subEntities that contains the
+        desired ratio, "totalFiltered", which shows how many of the total fulfills the
+        series requirement and "lastVal", that contains the most recent value of the temporal series.
         
         """
         
@@ -403,17 +403,17 @@ class MCOWAnalyser:
 
                 ?temporalSubentityOne rdfs:subClassOf wd:{country_wd_code};
                                     onto:{ratio_name} ?propertyValueOne;
-                                    onto:anyo ?anyoOne.
+                                    onto:year ?anyoOne.
             
                 ?temporalSubentityTwo rdfs:subClassOf wd:{country_wd_code};
                                     onto:{ratio_name} ?propertyValueTwo;
-                                    onto:anyo ?anyoTwo.
+                                    onto:year ?anyoTwo.
 
                 {{
                     SELECT ?anyo (COUNT (DISTINCT ?temporalSubentity) AS ?total) WHERE {{
                         ?temporalSubentity rdfs:subClassOf wd:{country_wd_code};
                                         onto:{ratio_name} ?propertyValue;
-                                        onto:anyo ?anyo.
+                                        onto:year ?anyo.
                     }}
                 }}
 
@@ -423,7 +423,7 @@ class MCOWAnalyser:
                 FILTER NOT EXISTS {{
                     ?temporalSubentityPrev rdfs:subClassOf wd:{country_wd_code};
                                         onto:{ratio_name} ?propertyValuePrev;
-                                        onto:anyo ?anyoPrev.
+                                        onto:year ?anyoPrev.
                     FILTER(?anyoPrev > ?anyoOne && ?anyoPrev < ?anyoTwo)  # Makes sure no year exists between the pair
                 }}
             }}
@@ -438,7 +438,7 @@ class MCOWAnalyser:
                 SELECT DISTINCT ?propertyValue WHERE {{
                     ?temporalSubentity rdfs:subClassOf wd:{country_wd_code};
                     onto:{ratio_name} ?propertyValue;
-                    onto:anyo ?anyo.
+                    onto:year ?anyo.
                 }}
             
                 ORDER BY ASC(?anyo)
@@ -452,7 +452,7 @@ class MCOWAnalyser:
                 SELECT DISTINCT ?propertyValue WHERE {{
                     ?temporalSubentity rdfs:subClassOf wd:{country_wd_code};
                     onto:{ratio_name} ?propertyValue;
-                    onto:anyo ?anyo.
+                    onto:year ?anyo.
                 }}
             
                 ORDER BY DESC(?anyo)
@@ -461,16 +461,13 @@ class MCOWAnalyser:
             results = self.graph.query(last_value_query)
             for row in results:
                 last_val = row.propertyValue
-                
-            print(f"First val: {first_val} Last val {last_val}")
             
             if (operator == "<" and first_val<last_val) or (operator == ">" and first_val>last_val):    # If, even with the factor adjustement corrections the original
                                                                                                         # criteria is met, the value is returned.
                 results = self.graph.query(user_query)
-                print(country_wd_code)
+                
                 for row in results:
-                    print(row.total, row.totalFiltered)
-                    result_dict = {"total":row.total, "totalFiltered":row.totalFiltered}
+                    result_dict = {"total":row.total, "totalFiltered":row.totalFiltered, "lastVal": last_val}
                     self.cache[cache_id] = result_dict
                     
                     return result_dict   # Just a single result, returned inmediately
@@ -497,7 +494,7 @@ class MCOWAnalyser:
         **Returns"":
         
         -> A dictionary containing the Wikidata key and the name of the countries that
-        fulfill the requirements.
+        fulfill the requirements, alongside with their most recent value.
         
         """
         
@@ -512,16 +509,15 @@ class MCOWAnalyser:
 
         for country_name, country_id in self.countries_in_ontology.items():
             result = self.anaylse_country_values(country_id, ratio_name, mode)
-            
-            print(result)
-            
+
             if "total" in result and "totalFiltered" in result and result["totalFiltered"]:
                 total = int(result["total"])
                 totalFiltered = int(result["totalFiltered"])
+                lastVal = float(result["lastVal"])
                 
                 if(totalFiltered==total-1):     # If the tendency is absolutely strict, the country is
                                                 # added to the returning dictionary.
-                    result_dict[country_name] = country_id
+                    result_dict[country_name] = (country_id, lastVal)
 
         return result_dict
     
@@ -546,6 +542,7 @@ class MCOWAnalyser:
         
         res_dict = dict()
         res_set = set()
+        res_values = dict()
         
         for ratio, mode in ratio_dict.items():
             
@@ -555,17 +552,26 @@ class MCOWAnalyser:
             called_dict = self.analyse_graph_values(ratio, mode)
             called_set = set([k for k,v in called_dict.items()])
             
-            print(called_dict)
+            for k,v in called_dict.items():
+                if k not in res_values:
+                    res_values[k] = list()
+                res_values[k].append({ratio: v[1]})
             
             if len(res_dict) == 0:
                 res_dict = called_dict.copy()
                 res_set = called_set
+
             else:
                 res_set = res_set.intersection(called_set)
                 res_dict = {k:v for k,v in res_dict.items() if k in res_set}
                 print(res_dict)
+            
+            if(len(res_set)) == 0:      # If the set is already empty, it makes no sense to keep on iterating over the rest of the attributes
+                break
         
-        return res_dict
+        res_values_def = {k:v for k,v in res_values.items() if k in res_set}
+        
+        return (res_dict, res_values_def)
     
     
     def getDAFOAnalysis(self, country_wd_code):
@@ -737,7 +743,7 @@ class MCOWAnalyser:
                 
         **Args"":
         
-        -> country_wd_code: the Wikidata code of the first country (e.g.: Spain -> Q29).
+        -> country_wd_code: the Wikidata code of a country (e.g.: Spain -> Q29).
         
         **Returns"":
         
@@ -792,101 +798,128 @@ class MCOWAnalyser:
         return temporal_entity_data_dict
     
     
-    def obtener_embedding_entidad(model, entity_name: str, entity_to_id: Dict) -> np.ndarray:
+    def get_entity_embedding(self, entity_name: str, entity_to_id: Dict) -> np.ndarray:
         """
-        Obtiene el vector embedding de una entidad
+        Given a graph entity, returns it's embedding form.
+        
+        **Args"":
+        
+        -> entity_name: in this case, a Wikidata code of a country (e.g.: Spain -> Q29).
+        
+        -> entity_to_id: a dictionary containing the internal id of the entity in the trained model.
+        
+        **Returns"":
+        
+        -> A numpy array representing the embedding form of the entity.
         """
         if entity_name not in entity_to_id:
             raise ValueError(f"Entidad '{entity_name}' no encontrada en el grafo")
 
         entity_id = entity_to_id[entity_name]
-        embedding = model.entity_representations[0](
+        embedding = self.model.model.entity_representations[0](
             torch.tensor([entity_id])
         ).detach().numpy()[0]
 
         return embedding
 
-    def calcular_similitudes_paises(result, paises: List[str]):
+    def calculate_countries_similarity(self, countries):
         """
-        Calcula la matriz de similitud entre países usando embeddings
+        Calculates countries similarity matrix by using a previously loaded embedding model.
+        
+        **Args"":
+        
+        -> countries: a list of Wikidata country codes (e.g.: Spain -> Q29).
+        
+        **Returns"":
+        
+        -> The cosine similarity matrix amongst every introduced country, apart from the list of valid countries
+        and their embeddings.
+
         """
-        model = result.model
-        entity_to_id = result.training.entity_to_id
+        entity_to_id = self.model.training.entity_to_id
 
-        print("\n" + "=" * 70)
-        print("CÁLCULO DE SIMILITUDES CON EMBEDDINGS")
-        print("=" * 70)
-
-        # Obtener embeddings de todas las países
+        # Get countries embeddings
         embeddings = []
-        paises_validos = []
+        valid_countries = []
 
-        for pais in paises:
+        for country in countries:
+            
+            if country not in self.countries_in_ontology.values():
+                raise Exception(f"The introduced country code '{country}' is not a valid country code or does not belong to the current ontology.")
+            
             try:
-                emb = obtener_embedding_entidad(model, pais, entity_to_id)
+                emb = self.get_entity_embedding(country, entity_to_id)
                 embeddings.append(emb)
-                paises_validos.append(pais)
+                valid_countries.append(country)
             except ValueError as e:
                 print(f"⚠ {e}")
 
         embeddings = np.array(embeddings)
 
-        # Calcular matriz de similitud coseno
+        # Calculate cosine similarity
         sim_matrix = cosine_similarity(embeddings)
 
         # Mostrar resultados
-        print(f"\nMatriz de similitud (coseno) entre {len(paises_validos)} paises:\n")
+        print(f"\nSimilarity (cosine) matrix amongst {len(valid_countries)} countries:\n")
         print(f"{'':20}", end='')
-        for p in paises_validos:
+        for p in valid_countries:
             print(f"{p:12}", end='')
         print()
 
-        for i, p1 in enumerate(paises_validos):
+        for i, p1 in enumerate(valid_countries):
             print(f"{p1:20}", end='')
-            for j, p2 in enumerate(paises_validos):
+            for j, p2 in enumerate(valid_countries):
                 print(f"{sim_matrix[i][j]:12.4f}", end='')
             print()
 
-        return sim_matrix, paises_validos, embeddings
+        return sim_matrix, valid_countries, embeddings
 
-    def encontrar_paises_similares(result, pais_query: str, top_k: int = 3):
+    def encontrar_paises_similares(self, query_country: str, top_k: int = 3):
         """
-        Encuentra los k países más similares a un país dado
+        Given a country, returns the k most similar countries to it.
+        
+        **Args"":
+        
+        -> query_country: a Wikidata country code (e.g.: Spain -> Q29).
+        
+        -> top_k: the number of expected results.
+        
+        **Returns"":
+        
+        -> The k most similar countries to the one introduced.
+        
         """
-        model = result.model
-        entity_to_id = result.training.entity_to_id
+        entity_to_id = self.model.training.entity_to_id
         id_to_entity = {v: k for k, v in entity_to_id.items()}
 
         # Obtener todas los países del grafo
-        todos_paises = [ent for ent in entity_to_id.keys()
-                        if ent not in ['type', 'Movie', 'director', 'actor', 'genre',
-                                        'name', 'label', 'SciFi', 'Drama', 'Action',
-                                        'Thriller', 'Romance', 'Crime']]
+        all_countries = [ent for ent in entity_to_id.keys()
+                        if ent not in ['type']]
 
         # Obtener embedding de el país query
         try:
-            query_emb = obtener_embedding_entidad(model, pais_query, entity_to_id)
+            query_emb = self.get_entity_embedding(query_country, entity_to_id)
         except ValueError as e:
             print(f"Error: {e}")
             return
 
-        # Calcular similitud con todas los países
-        similitudes = []
-        for pais in todos_paises:
-            if pais != pais_query:
+        # Calculate similarity amongst all the countries in the model
+        similarities = []
+        for country in all_countries:
+            if country != query_country:
                 try:
-                    emb = obtener_embedding_entidad(model, pais, entity_to_id)
+                    emb = self.get_entity_embedding(country, entity_to_id)
                     sim = cosine_similarity([query_emb], [emb])[0][0]
-                    similitudes.append((pais, sim))
+                    similarities.append((country, sim))
                 except:
                     pass
 
-        # Ordenar por similitud
-        similitudes.sort(key=lambda x: x[1], reverse=True)
+        # Order by similarity
+        similarities.sort(key=lambda x: x[1], reverse=True)
 
         print(f"\n{'=' * 70}")
-        print(f"Top {top_k} paises similares a '{pais_query}':")
+        print(f"Top {top_k} countries similar to '{query_country}':")
         print(f"{'=' * 70}")
-        for i, (pais, sim) in enumerate(similitudes[:top_k], 1):
-            print(f"{i}. {pais:20} (similitud: {sim:.4f})")
+        for i, (country, sim) in enumerate(similarities[:top_k], 1):
+            print(f"{i}. {country:20} (similarity: {sim:.4f})")
             

@@ -42,3 +42,19 @@
 .st-key-btn_to_country_hist_tend button:hover {
     transform: translateY(-5px);
 }
+
+.st-key-btn_add_criteria button {
+    background: #f3e2d0;
+}
+
+.st-key-btn_reset_criteria button {
+    background: #f3e2d0;
+}
+
+.st-key-btn_search_by_criteria button {
+    background: #f3e2d0;
+}
+
+button[data-testid="stExpandSidebarButton"]{
+    display: none;
+}
